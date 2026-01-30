@@ -2,13 +2,13 @@
 
   "name": "api.silvertransfert.fr",
 
-  "version": "2.3.0",
+  "version": "3.0.0",
 
   "dev": true,
 
   "scripts": {
 
-    "dev": "tsc --watch",
+    "dev": "tsc && node dist/app.js",
     "build": "tsc",
     "node:start": "node dist/app",
 
