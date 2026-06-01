@@ -54,27 +54,32 @@ console.log("✅ Express chargé");
 
 const uploadDir = path.join(__dirname, config.TEMPdir);
 
-if (!fs.existsSync(uploadDir)) {
+if (!fs.existsSync(uploadDir)) 
+{
     fs.mkdirSync(uploadDir);
     console.log('✅ Répertoire "',config.TEMPdir,'" créé');
 };
 
-if (!fs.existsSync(path.join(__dirname, config.DATAdir))) {
+if (!fs.existsSync(path.join(__dirname, config.DATAdir)))
+{
     fs.mkdirSync(path.join(__dirname, config.DATAdir));
     console.log('✅ Répertoire "',config.DATAdir,'" créé'); 
 };
 
-if (!fs.existsSync(path.join(__dirname, config.LOGDir))) {
+if (!fs.existsSync(path.join(__dirname, config.LOGDir))) 
+{
     fs.mkdirSync(path.join(__dirname, config.LOGDir));
     console.log('✅ Répertoire "',config.LOGDir,'" créé'); 
 }
 
-if (!fs.existsSync(path.join(__dirname, config.BACKUP_DATA_DIR))) {
+if (!fs.existsSync(path.join(__dirname, config.BACKUP_DATA_DIR))) 
+{
     fs.mkdirSync(path.join(__dirname, config.BACKUP_DATA_DIR));
     console.log('✅ Répertoire "',config.BACKUP_DATA_DIR,'" créé'); 
 }
 
-if (!fs.existsSync(path.join(__dirname, config.DBFile))) {
+if (!fs.existsSync(path.join(__dirname, config.DBFile))) 
+{
     fs.mkdirSync(path.join(__dirname, path.dirname(config.DBFile)));
     fs.writeFileSync(path.join(__dirname, config.DBFile), JSON.stringify([]), 'utf-8');
     console.log('✅ Répertoire "',config.DBFile,'" créé'); 
