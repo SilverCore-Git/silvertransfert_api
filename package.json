@@ -8,20 +8,9 @@
 
   "scripts": {
 
-    "dev": "tsc && node dist/app.js",
-    "build": "tsc",
-    "node:start": "node dist/app",
-
-    "start": "pm2 start app.js --name api.silvertransfert.fr --env production",
-    "start:dev": "pm2 start dist/app.js --name api.silvertransfert.fr --env production",
-
-    "stop": "pm2 stop api.silvertransfert.fr",
-
-    "restart": "pm2 stop api.silvertransfert.fr && pm2 start app.js --name api.silvertransfert.fr --env production",
-
-    "status": "pm2 status",
-
-    "log": "pm2 logs api.silvertransfert.fr",
+    "dev": "bun run --hot src/app.ts",
+    "build": "bun build ./src/app.ts --outdir ./dist --minify --sourcemap=external --target=node --format=esm",
+    "start": "bun dist/app.js",
 
     "testcrypt": "node scripts/check_crypt.js",
 
