@@ -1,4 +1,4 @@
-import config from '../../config/config.json';
+import config from '../../config/config';
 import path from 'path';
 import 'dotenv/config';
 

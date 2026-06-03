@@ -2,7 +2,7 @@ import { getCurrentDate, getCurrentTime } from './utils/getDate';
 import path from 'path';
 import fs from 'fs';
 
-import config from '../config/config.json';
+import config from '../config/config';
 const LOGDir = path.join(__dirname, '../', config.LOGDir);
 
 const a = async () => {

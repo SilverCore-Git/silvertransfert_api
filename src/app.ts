@@ -10,7 +10,7 @@ import crypto from "crypto";
 import 'dotenv/config';
 import cookieParser from 'cookie-parser';
 
-import config from './config/config.json';
+import config from './config/config';
 import { dev, version } from '../package.json';
 
 import './assets/Logger';

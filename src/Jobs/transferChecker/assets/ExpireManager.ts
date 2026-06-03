@@ -3,7 +3,7 @@ import path from "path";
 const fsp = fs.promises;
 
 import db from "../../../assets/database/db";
-import config from "../../../config/config.json";
+import config from "../../../config/config";
 import type { Transfert } from "../../../assets/database/dbTypes";
 
 export default class ExpireManager {

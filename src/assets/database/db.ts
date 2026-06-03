@@ -2,7 +2,7 @@ import fs from "fs";
 const fsp = fs.promises;
 import path from "path";
 
-import config from '../../config/config.json';
+import config from '../../config/config';
 import type { Transfert } from "./dbTypes";
 
 const DB_FILE = path.join(__dirname, '../../', config.DBFile);
