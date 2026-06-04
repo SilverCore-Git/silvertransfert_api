@@ -9,6 +9,8 @@ import path from "path";
 import crypto from "crypto";
 import 'dotenv/config';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 import config from './config/config';
 import { dev, version } from '../package.json';
@@ -18,22 +20,66 @@ import './Jobs';
 
 
 const corsOptions = {
-    origin: dev ? '*' : 'https://www.silvertransfert.fr',
+    origin: dev ? 'http://localhost:3000' : 'https://www.silvertransfert.fr',
     methods: ['POST', 'GET'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 };
 
 
 const app = express();
 console.log("🔄 Démarrage de Express...");
 
-app.set('trust proxy', true);
+// Configuration sécurisée du trust proxy (liste blanche des IPs de confiance)
+app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 app.set("view engine", "ejs");
+
+// Headers de sécurité avec Helmet
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:'],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'none'"]
+        }
+    },
+    hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true
+    },
+    noSniff: true,
+    xssFilter: true,
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" }
+}));
+
+// Rate limiting global
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limite à 100 requêtes par fenêtre
+    message: { error: true, message: 'Trop de requêtes, veuillez réessayer plus tard.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use(limiter);
+
+// Rate limiting plus strict pour les endpoints sensibles
+const strictLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // Limite à 20 requêtes par fenêtre
+    message: { error: true, message: 'Trop de tentatives, veuillez réessayer plus tard.' },
+});
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
-app.use(express.json({ limit: '16gb' }))
-app.use(express.urlencoded({ limit: '16gb', extended: true }))
+app.use(express.json({ limit: '10mb' })) // Réduit de 16GB à 10MB
+app.use(express.urlencoded({ limit: '10mb', extended: true })) // Réduit de 16GB à 10MB
 
 app.use((req, res, next) => {
 
@@ -137,13 +183,21 @@ app.get('/passwd/:nb', async (req, res) => {
 
     const nb = Number(req.params.nb);
 
-    function genererMotDePasse(longueur: number = 10) {
-        const caracteres = '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    // Validation de la longueur
+    if (isNaN(nb) || nb < 1 || nb > 128) {
+        return res.status(400).json({ error: true, message: 'Longueur invalide. Doit être entre 1 et 128.' });
+    }
+
+    function genererMotDePasse(longueur: number = 10): string {
+        // Utilisation de crypto.randomBytes pour une génération sécurisée
+        const caracteres = '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        const caracteresLength = caracteres.length;
         let motDePasse = '';
-    
+        
+        // Générer des octets aléatoires de manière cryptographiquement sûre
+        const randomBytes = crypto.randomBytes(longueur);
         for (let i = 0; i < longueur; i++) {
-            const index = Math.floor(Math.random() * caracteres.length);
-            motDePasse += caracteres[index];
+            motDePasse += caracteres[randomBytes[i] % caracteresLength];
         }
     
         return motDePasse;

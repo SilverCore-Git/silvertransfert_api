@@ -9,7 +9,9 @@
   "scripts": {
 
     "dev": "bun run --hot src/app.ts",
+
     "build": "bun build ./src/app.ts --outdir ./dist --minify --sourcemap=external --target=node --format=esm",
+
     "start": "bun dist/app.js",
 
     "testcrypt": "node scripts/check_crypt.js",
@@ -47,6 +49,8 @@
     "ejs": "^3.1.10",
 
     "express": "^4.21.2",
+
+    "express-rate-limit": "^8.5.2",
 
     "fs": "^0.0.1-security",
 
