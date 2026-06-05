@@ -3,7 +3,7 @@ import 'dotenv/config';
 const config = {
     // Server Configuration
     hostname: process.env.HOSTNAME || 'localhost',
-    Port: parseInt(process.env.PORT || '84', 10),
+    Port: parseInt(process.env.PORT || '8080', 10),
     
     // Directories
     DATAdir: process.env.DATA_DIR || 'data',
