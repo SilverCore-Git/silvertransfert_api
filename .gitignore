@@ -1,3 +1,8 @@
 /dist
 /node_modules
 .env
+"key/" 
+"src/data/" 
+"src/temp/" 
+"src/db/" 
+"src/log/" 
