@@ -16,29 +16,6 @@ import fs from 'fs';
 
 const uploadDir = path.join(__dirname, "../../", config.TEMPdir);
 
-// Whitelist des types MIME autorisés
-const ALLOWED_MIME_TYPES = [
-    'application/pdf',
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'video/mp4',
-    'audio/mpeg',
-    'audio/mp3',
-    'application/zip',
-    'application/x-zip-compressed',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain',
-    'text/csv',
-    'application/json',
-    'application/x-rar-compressed',
-    'application/octet-stream'
-];
-
 // Validation des paramètres de transfert
 function validateTransferParams(id: string, passwd: string): { valid: boolean; error?: string } {
     // Validation de l'ID (alphanumérique, tirets, underscores, 8-64 caractères)
@@ -76,7 +53,7 @@ const storage = multer.diskStorage({
 
 // Filtre pour valider les types de fichiers
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    if (true) {
         cb(null, true);
     } else {
         cb(new Error(`Type de fichier non autorisé: ${file.mimetype}`));
@@ -87,7 +64,7 @@ const upload = multer({
     storage,
     fileFilter,
     limits: {
-        fileSize: 4 * 1024 * 1024 * 1024, // 4 Go
+        fileSize: 16 * 1024 * 1024 * 1024, // 16 Go
         files: 20 // Autoriser jusqu'à 20 fichiers
     }
 });
@@ -96,7 +73,7 @@ const upload = multer({
 const handleMulterError = (err: any, _req: Request, res: Response, next: () => void) => {
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(413).json({ error: true, message: 'Fichier trop volumineux. Taille maximale: 4 Go.' });
+            return res.status(413).json({ error: true, message: 'Fichier trop volumineux. Taille maximale: 16 Go.' });
         }
         return res.status(400).json({ error: true, message: `Erreur upload: ${err.message}` });
     }

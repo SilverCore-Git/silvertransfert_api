@@ -6,6 +6,7 @@ import fs from "fs";
 import http from "http";
 import cors from "cors";
 import path from "path";
+import morgan from "morgan";
 import crypto from "crypto";
 import 'dotenv/config';
 import cookieParser from 'cookie-parser';
@@ -33,6 +34,7 @@ console.log("🔄 Démarrage de Express...");
 // Configuration sécurisée du trust proxy (liste blanche des IPs de confiance)
 app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 app.set("view engine", "ejs");
+app.use(morgan('dev'));
 
 // Headers de sécurité avec Helmet
 app.use(helmet({
@@ -80,16 +82,6 @@ app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' })) // Réduit de 16GB à 10MB
 app.use(express.urlencoded({ limit: '10mb', extended: true })) // Réduit de 16GB à 10MB
-
-app.use((req, res, next) => {
-
-    if (req.hostname !== config.hostname) {
-        return res.redirect(`https://${config.hostname}${req.path}`);
-    };
-
-    next(); 
-
-});
 
 
 app.use(express.static(path.join(__dirname, 'public')));
