@@ -78,6 +78,8 @@
 
   "devDependencies": {
 
+    "@types/archiver": "^6.0.2",
+
     "@types/cookie-parser": "^1.4.10",
 
     "@types/cors": "^2.8.19",
@@ -93,6 +95,12 @@
     "@types/node": "^24.10.1",
 
     "@types/node-fetch": "^2.6.13",
+
+    "archiver": "^7.0.1",
+
+    "install": "^0.13.0",
+
+    "npm": "^11.16.0",
 
     "typescript": "^5.9.3"
 

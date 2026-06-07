@@ -1,6 +1,7 @@
 import type { Request } from "express";
 import decryptFile from "../../assets/Crypter/DecryptFile";
 import key from "../../assets/Crypter/key_manager";
+import db from "../../assets/database/db";
 
 export default async function
 (
@@ -31,6 +32,13 @@ export default async function
             privateKey,
             passwd
         });
+
+        // Update status in DB
+        const transfer = await db.get(transferID);
+        if (transfer) {
+            transfer.status = 'ready_to_download';
+            await db.update(transfer);
+        }
 
     }
     catch(err) {

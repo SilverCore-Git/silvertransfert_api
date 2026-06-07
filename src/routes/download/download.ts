@@ -9,6 +9,7 @@ import decrypteFile from "./decrypteFile";
 import VerifyPasswd from "../../assets/Crypter/VerifyPasswd";
 import key from "../../assets/Crypter/key_manager";
 import downloadFile from "./downloadFile";
+import config from "../../config/config";
 
 // Validation des paramètres
 function validateDownloadParams(id: string, passwd: string): { valid: boolean; error?: string } {
@@ -33,8 +34,8 @@ router.post('/download', async (req: Request, res: Response) => {
     const transfer = await db.get(id);
     if (!transfer) return res.status(404).json({ error: true, message: 'Transfer not found' });
 
-    const encryptedFilePath = path.join(__dirname, "../data", transfer.cryptedFileName);
-    const decryptedFilePath = path.join(__dirname, "../temp", transfer.tempFileName);
+    const encryptedFilePath = path.join(__dirname, "../../", config.DATAdir, transfer.cryptedFileName);
+    const decryptedFilePath = path.join(__dirname, "../../", config.TEMPdir, transfer.tempFileName);
     const privateKey: string = await key.read(id, 'private') as string;
 
     const verifyPasswd: boolean = await VerifyPasswd(
@@ -55,6 +56,7 @@ router.post('/download', async (req: Request, res: Response) => {
     
     return await downloadFile({
         decryptedFilePath,
+        originalFileName: transfer.originalFileName,
         res
     });
 });
@@ -75,8 +77,8 @@ router.post('/decrypt', async (req: Request, res: Response) => {
         return res.json({ ready_to_download: true });
     }
 
-    const encryptedFilePath = path.join(__dirname, "../data", transfer.cryptedFileName);
-    const decryptedFilePath = path.join(__dirname, "../temp", transfer.tempFileName);
+    const encryptedFilePath = path.join(__dirname, "../../", config.DATAdir, transfer.cryptedFileName);
+    const decryptedFilePath = path.join(__dirname, "../../", config.TEMPdir, transfer.tempFileName);
     const privateKey: string = await key.read(id, 'private') as string;
 
     const verifyPasswd: boolean = await VerifyPasswd(
@@ -114,7 +116,8 @@ router.get('/status', async (req: Request, res: Response) => {
     res.json({
         id: transfer.UUID,
         canBeDownload: transfer.status === 'ready_to_download',
-        canBeEncrypt: transfer.status === 'ready_to_decrypt'
+        canBeEncrypt: transfer.status === 'ready_to_decrypt',
+        isZip: transfer.originalFileName?.endsWith('.zip') && transfer.originalFileName?.startsWith('SilverTransfer_')
     });
 });
 

@@ -11,8 +11,10 @@ import { getCurrentDate, getCurrentTime } from "../../assets/utils/getDate";
 import { Transfert } from "../../assets/database/dbTypes";
 import afterUpload from "./afterUpload";
 import config from '../../config/config';
+import archiver from 'archiver';
+import fs from 'fs';
 
-const uploadDir = path.join(__dirname, '../', config.TEMPdir);
+const uploadDir = path.join(__dirname, "../../", config.TEMPdir);
 
 // Whitelist des types MIME autorisés
 const ALLOWED_MIME_TYPES = [
@@ -85,8 +87,8 @@ const upload = multer({
     storage,
     fileFilter,
     limits: {
-        fileSize: 4 * 1024 * 1024 * 1024, // 4 Go (réduit de 16 Go)
-        files: 1 // Un seul fichier par requête
+        fileSize: 4 * 1024 * 1024 * 1024, // 4 Go
+        files: 20 // Autoriser jusqu'à 20 fichiers
     }
 });
 
@@ -104,7 +106,7 @@ const handleMulterError = (err: any, _req: Request, res: Response, next: () => v
     next();
 };
 
-router.post('/file', upload.single("file"), handleMulterError, async (req: Request, res: Response) => {
+router.post('/file', upload.array("file", 20), handleMulterError, async (req: Request, res: Response) => {
 
     // Récupération et validation des paramètres
     const id = typeof req.query.id === 'string' ? req.query.id : '';
@@ -116,17 +118,66 @@ router.post('/file', upload.single("file"), handleMulterError, async (req: Reque
     }
     
     const ip: string = getClientIp(req);
+    const files = req.files as Express.Multer.File[];
 
-    if (!req.file) {
+    if (!files || files.length === 0) {
         return res.status(400).json({ message: "Aucun fichier reçu" });
     }
 
-    console.log('New transfer : ', id);
+    console.log('New transfer : ', id, 'with', files.length, 'files');
+
+    let finalTempPath = '';
+    let originalName = '';
+    let totalSize = 0;
+
+    if (files.length > 1) {
+        // ZIP multiple files
+        originalName = `SilverTransfer_${id}.zip`;
+        const zipPath = path.join(uploadDir, `${id}_archive.zip`);
+        const output = fs.createWriteStream(zipPath);
+        
+        // Final robust check for Bun/CJS/ESM interop
+        let archive;
+        if (typeof archiver === 'function') {
+            archive = archiver('zip', { zlib: { level: 9 } });
+        } else if ((archiver as any).create) {
+            archive = (archiver as any).create('zip', { zlib: { level: 9 } });
+        } else if ((archiver as any).default) {
+            archive = (archiver as any).default('zip', { zlib: { level: 9 } });
+        } else {
+            throw new Error('Archiver module not found or incompatible');
+        }
+
+        const zipPromise = new Promise<void>((resolve, reject) => {
+            output.on('close', () => resolve());
+            archive.on('error', (err) => reject(err));
+        });
+
+        archive.pipe(output);
+        for (const file of files) {
+            archive.file(file.path, { name: file.originalname });
+        }
+        await archive.finalize();
+        await zipPromise;
+
+        // Delete individual temp files
+        for (const file of files) {
+            try { await fs.promises.unlink(file.path); } catch {}
+        }
+
+        finalTempPath = zipPath;
+        const stats = await fs.promises.stat(zipPath);
+        totalSize = stats.size;
+    } else {
+        // Single file
+        finalTempPath = files[0].path;
+        originalName = files[0].originalname;
+        totalSize = files[0].size;
+    }
 
     await key.generate(id, passwd);
-    const tempFilePath: string = req.file.path;
-    const encryptedFileName: string = `${id}.${req.file.filename}.enc`;
-    const encryptedFilePath: string = path.join(__dirname, `../${config.DATAdir}`, encryptedFileName);
+    const encryptedFileName: string = `${id}.${path.basename(finalTempPath)}.enc`;
+    const encryptedFilePath: string = path.join(__dirname, "../../", config.DATAdir, encryptedFileName);
     const downloadPath: string = `https://t.silvertransfert.fr/${id}-${passwd}`;
 
     // Supprimer le mot de passe de la mémoire
@@ -135,8 +186,9 @@ router.post('/file', upload.single("file"), handleMulterError, async (req: Reque
     const transfer: Transfert = {
         UUID: id,
         cryptedFileName: encryptedFileName,
-        tempFileName: path.basename(tempFilePath),
-        size: req.file.size as number,
+        tempFileName: path.basename(finalTempPath),
+        originalFileName: originalName,
+        size: totalSize,
         senderIp: ip,
         date: `${getCurrentDate()} - ${getCurrentTime()}`,
         status: 'await_crypting'
@@ -146,7 +198,7 @@ router.post('/file', upload.single("file"), handleMulterError, async (req: Reque
 
     res.json({
         status: transfer.status,
-        message: "Fichier reçu !",
+        message: "Fichiers reçus et préparés !",
         id,
         downloadPath
     });
@@ -154,7 +206,7 @@ router.post('/file', upload.single("file"), handleMulterError, async (req: Reque
     await afterUpload({
         transferID: id,
         encryptedFilePath,
-        tempFilePath
+        tempFilePath: finalTempPath
     });
 
 });

@@ -3,6 +3,7 @@ export interface Transfert {
     UUID: string;       // two first part of an uuid (others parts are the passwd)
     cryptedFileName: string; // foalder name
     tempFileName: string;
+    originalFileName?: string;
     size: number; // size on o
     senderIp: string;
     date: string; // date - time 

@@ -7,16 +7,18 @@ export default async function
 (
     {
         res,
-        decryptedFilePath
+        decryptedFilePath,
+        originalFileName
     }:
     {
         res: Response,
-        decryptedFilePath: string
+        decryptedFilePath: string,
+        originalFileName?: string
     }
 )
 {
 
-    const filename = path.basename(decryptedFilePath);
+    const filename = originalFileName || path.basename(decryptedFilePath);
     const stat = await fs.promises.stat(decryptedFilePath);
 
     const mimeType = mime.lookup(filename) || 'application/octet-stream';
@@ -27,17 +29,17 @@ export default async function
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader(
         'Content-Disposition',
-        `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`
+        `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`
     );
-    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
         
 
     try {
         const stream = fs.createReadStream(decryptedFilePath);
 
-        stream.on('open', () => {
-            stream.pipe(res);
-        });
+        stream.pipe(res);
 
         stream.on('error', (err: any) => {
             console.error('❌ Error on file stream :', err);
