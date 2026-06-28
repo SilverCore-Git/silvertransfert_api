@@ -34,8 +34,8 @@ router.post('/download', async (req: Request, res: Response) => {
     const transfer = await db.get(id);
     if (!transfer) return res.status(404).json({ error: true, message: 'Transfer not found' });
 
-    const encryptedFilePath = path.join(__dirname, "../../", config.DATAdir, transfer.cryptedFileName);
-    const decryptedFilePath = path.join(__dirname, "../../", config.TEMPdir, transfer.tempFileName);
+    const encryptedFilePath = path.join(config.DATAdir, transfer.cryptedFileName);
+    const decryptedFilePath = path.join(config.TEMPdir, transfer.tempFileName);
     const privateKey: string = await key.read(id, 'private') as string;
 
     const verifyPasswd: boolean = await VerifyPasswd(
@@ -77,8 +77,8 @@ router.post('/decrypt', async (req: Request, res: Response) => {
         return res.json({ ready_to_download: true });
     }
 
-    const encryptedFilePath = path.join(__dirname, "../../", config.DATAdir, transfer.cryptedFileName);
-    const decryptedFilePath = path.join(__dirname, "../../", config.TEMPdir, transfer.tempFileName);
+    const encryptedFilePath = path.join(config.DATAdir, transfer.cryptedFileName);
+    const decryptedFilePath = path.join(config.TEMPdir, transfer.tempFileName);
     const privateKey: string = await key.read(id, 'private') as string;
 
     const verifyPasswd: boolean = await VerifyPasswd(

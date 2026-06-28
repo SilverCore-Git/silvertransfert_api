@@ -18,7 +18,7 @@ class transferBackup
         this.BACKUP_DATA_DIR = '';
 
         if (config.BACKUP_DATA_DIR) {
-            this.BACKUP_DATA_DIR = path.join(config.BACKUP_DATA_DIR);
+            this.BACKUP_DATA_DIR = config.BACKUP_DATA_DIR;
         }
 
     }
@@ -65,7 +65,7 @@ class transferBackup
             try {
 
                 const outDir: string = path.join(this.BACKUP_DATA_DIR, transfer.cryptedFileName);
-                const srcDir: string = path.join(__dirname, '../', config.DATAdir, transfer.cryptedFileName);
+                const srcDir: string = path.join(config.DATAdir, transfer.cryptedFileName);
                 
                 console.log(`[JOBS:transferBackup]: backing up transfer: ${transfer.cryptedFileName}`);
                 console.log(`[JOBS:transferBackup]: from ${srcDir} to ${outDir}`);

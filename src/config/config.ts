@@ -1,16 +1,28 @@
 import 'dotenv/config';
+import path from 'path';
+
+// Helper function to resolve paths - supports both absolute and relative paths
+function resolvePath(envVar: string | undefined, defaultPath: string): string {
+    const value = envVar || defaultPath;
+    // If path starts with /, it's absolute - return as is
+    if (value.startsWith('/')) {
+        return value;
+    }
+    // Otherwise, resolve relative to process.cwd()
+    return path.join(process.cwd(), value);
+}
 
 const config = {
     // Server Configuration
     hostname: process.env.HOSTNAME || 'localhost',
     Port: parseInt(process.env.PORT || '8080', 10),
     
-    // Directories
-    DATAdir: process.env.DATA_DIR || 'data',
-    TEMPdir: process.env.TEMP_DIR || 'temp',
-    LOGDir: process.env.LOG_DIR || 'log',
-    DBFile: process.env.DB_FILE || 'db/database.json',
-    BACKUP_DATA_DIR: process.env.BACKUP_DATA_DIR || 'mirror',
+    // Directories - all resolved to absolute paths
+    DATAdir: resolvePath(process.env.DATA_DIR, 'data'),
+    TEMPdir: resolvePath(process.env.TEMP_DIR, 'temp'),
+    LOGDir: resolvePath(process.env.LOG_DIR, 'log'),
+    DBFile: resolvePath(process.env.DB_FILE, 'db/database.json'),
+    BACKUP_DATA_DIR: resolvePath(process.env.BACKUP_DATA_DIR, 'mirror'),
     
     // Backup Settings
     BACKUP: process.env.BACKUP === 'true',

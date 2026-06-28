@@ -90,37 +90,37 @@ app.use(express.static(path.join(__dirname, 'public')));
 console.log("✅ Express chargé");
 
 
-const uploadDir = path.join(config.TEMPdir);
+const uploadDir = config.TEMPdir;
 
 if (!fs.existsSync(uploadDir)) 
 {
-    fs.mkdirSync(uploadDir);
+    fs.mkdirSync(uploadDir, { recursive: true });
     console.log('✅ Répertoire "',config.TEMPdir,'" créé');
 };
 
-if (!fs.existsSync(path.join(config.DATAdir)))
+if (!fs.existsSync(config.DATAdir))
 {
-    fs.mkdirSync(path.join(config.DATAdir));
+    fs.mkdirSync(config.DATAdir, { recursive: true });
     console.log('✅ Répertoire "',config.DATAdir,'" créé'); 
 };
 
-if (!fs.existsSync(path.join(config.LOGDir))) 
+if (!fs.existsSync(config.LOGDir)) 
 {
-    fs.mkdirSync(path.join(config.LOGDir));
+    fs.mkdirSync(config.LOGDir, { recursive: true });
     console.log('✅ Répertoire "',config.LOGDir,'" créé'); 
 }
 
-if (!fs.existsSync(path.join(config.BACKUP_DATA_DIR))) 
+if (!fs.existsSync(config.BACKUP_DATA_DIR)) 
 {
-    fs.mkdirSync(path.join(config.BACKUP_DATA_DIR));
+    fs.mkdirSync(config.BACKUP_DATA_DIR, { recursive: true });
     console.log('✅ Répertoire "',config.BACKUP_DATA_DIR,'" créé'); 
 }
 
-if (!fs.existsSync(path.join(config.DBFile))) 
+if (!fs.existsSync(config.DBFile)) 
 {
-    fs.mkdirSync(path.join(path.dirname(config.DBFile)));
-    fs.writeFileSync(path.join(config.DBFile), JSON.stringify([]), 'utf-8');
-    console.log('✅ Répertoire "',config.DBFile,'" créé'); 
+    fs.mkdirSync(path.dirname(config.DBFile), { recursive: true });
+    fs.writeFileSync(config.DBFile, JSON.stringify([]), 'utf-8');
+    console.log('✅ Fichier "',config.DBFile,'" créé'); 
 }
 
 

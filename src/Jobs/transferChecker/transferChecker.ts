@@ -8,7 +8,7 @@ import _DiskReporter from "./assets/DiskReporter";
 const webhook: string = process.env.DISCORD_WEBHOOK || 'https://d.d';
 
 const ExpireManager = new _ExpireManager();
-const DiskReporter = new _DiskReporter(path.join(__dirname, '../..', config.DBFile), webhook);
+const DiskReporter = new _DiskReporter(config.DBFile, webhook);
 
 export default () => {
     ExpireManager.run();

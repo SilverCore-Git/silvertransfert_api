@@ -3,18 +3,17 @@ import path from 'path';
 import fs from 'fs';
 
 import config from '../config/config';
-const LOGDir = path.join(__dirname, '../', config.LOGDir);
+const LOGDir = config.LOGDir;
 
 const a = async () => {
-    if (!fs.existsSync(LOGDir)) await fs.promises.mkdir(LOGDir);
+    if (!fs.existsSync(LOGDir)) await fs.promises.mkdir(LOGDir, { recursive: true });
 }
 a();
 
 const logToFile = (message: string) => {
     const date = getCurrentDate();
     const time = getCurrentTime();
-    const logDir = path.join(__dirname, `../${config.LOGDir}`);
-    const logFilePath = path.join(logDir, `${date}.log`);
+    const logFilePath = path.join(config.LOGDir, `${date}.log`);
 
     const logMessage = `[${date} - ${time}] > ${message}\n`;
     fs.appendFileSync(logFilePath, logMessage, "utf8");

@@ -1,11 +1,10 @@
 import fs from "fs";
 const fsp = fs.promises;
-import path from "path";
 
 import config from '../../config/config';
 import type { Transfert } from "./dbTypes";
 
-const DB_FILE = path.join(process.cwd(), config.DBFile);
+const DB_FILE = config.DBFile;
 
 
 class db 

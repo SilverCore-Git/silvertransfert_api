@@ -14,7 +14,7 @@ import config from '../../config/config';
 import archiver from 'archiver';
 import fs from 'fs';
 
-const uploadDir = path.join(__dirname, "../../", config.TEMPdir);
+const uploadDir = config.TEMPdir;
 
 // Validation des paramètres de transfert
 function validateTransferParams(id: string, passwd: string): { valid: boolean; error?: string } {
@@ -154,7 +154,7 @@ router.post('/file', upload.array("file", 20), handleMulterError, async (req: Re
 
     await key.generate(id, passwd);
     const encryptedFileName: string = `${id}.${path.basename(finalTempPath)}.enc`;
-    const encryptedFilePath: string = path.join(__dirname, "../../", config.DATAdir, encryptedFileName);
+    const encryptedFilePath: string = path.join(config.DATAdir, encryptedFileName);
     const downloadPath: string = `https://t.silvertransfert.fr/${id}-${passwd}`;
 
     // Supprimer le mot de passe de la mémoire

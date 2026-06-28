@@ -19,8 +19,8 @@ export default class ExpireManager {
     }
 
     private async deleteFiles(tr: Transfert) {
-        const folder = path.join(__dirname, "..", "data", tr.cryptedFileName);
-        const tempFile = path.join(__dirname, "..", "data", tr.tempFileName);
+        const folder = path.join(config.DATAdir, tr.cryptedFileName);
+        const tempFile = path.join(config.TEMPdir, tr.tempFileName);
 
         await fsp.rm(folder, { recursive: true, force: true });
         await fsp.rm(tempFile, { recursive: true, force: true });
@@ -92,7 +92,7 @@ export default class ExpireManager {
     }
 
     private async listAllUUIDs(): Promise<string[]> {
-        const file = await fs.promises.readFile(path.join(__dirname, '../../..', config.DBFile), "utf-8");
+        const file = await fs.promises.readFile(config.DBFile, "utf-8");
         const arr: Transfert[] = JSON.parse(file);
         return arr.map(tr => tr.UUID);
     }
