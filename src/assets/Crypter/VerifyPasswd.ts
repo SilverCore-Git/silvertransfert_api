@@ -1,17 +1,22 @@
 import crypto from 'crypto';
 import fs from 'fs';
+import path from 'path';
+import config from '../../config/config';
 
 export default async function (inputFolder: string, privateKey: string, passwd: string): Promise<boolean>
 {  
 
     try {
         // Validation du chemin pour prévenir les attaques par injection
-        const path = require('path');
         const resolvedPath = path.resolve(inputFolder);
         const layoutPath = path.join(resolvedPath, 'witness_layout.json');
         
-        // Vérifier que le chemin est dans un répertoire attendu
-        if (!resolvedPath.includes('/data/') && !resolvedPath.includes('\\data\\')) {
+        // Vérifier que le chemin est dans le répertoire DATAdir attendu
+        // Normaliser les chemins pour comparaison (enlever les slashes finaux)
+        const normalizedDataDir = config.DATAdir.replace(/[\/]$/, '');
+        const normalizedResolvedPath = resolvedPath.replace(/[\/]$/, '');
+        
+        if (!normalizedResolvedPath.startsWith(normalizedDataDir)) {
             console.error('❌ Chemin invalide pour witness_layout.json:', inputFolder);
             return false;
         }
