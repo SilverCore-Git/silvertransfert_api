@@ -5,7 +5,7 @@ import path from "path";
 import config from '../../config/config';
 import type { Transfert } from "./dbTypes";
 
-const DB_FILE = path.join(config.DBFile);
+const DB_FILE = path.join(process.cwd(), config.DBFile);
 
 
 class db 
