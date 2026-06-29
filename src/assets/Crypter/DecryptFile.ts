@@ -43,11 +43,14 @@ export default async function({
     let inputStream: fs.ReadStream | null = null;
 
     try {
+        // Resolve inputFolder to absolute path and ensure it's safe
+        const resolvedInputFolder = path.resolve(inputFolder);
+        const resolvedOutputFile = path.resolve(outputFile);
 
-        const filePlanPath = path.join(inputFolder, 'layout.json');
+        const filePlanPath = path.join(resolvedInputFolder, 'layout.json');
         const filePlan: Layout = JSON.parse(await fs.promises.readFile(filePlanPath, 'utf-8'));
 
-        const sortedFiles = (await fs.promises.readdir(inputFolder))
+        const sortedFiles = (await fs.promises.readdir(resolvedInputFolder))
             .filter((file: string) => file.endsWith('.enc'))
             .sort((a: string, b: string) => {
                 const aNum = parseInt(a.match(/\d+/)?.[0] || '0', 10);
@@ -69,7 +72,7 @@ export default async function({
             sortedFiles.map(async (file, index) => {
                 await semaphore.acquire();
                 try {
-                    const inputFile = path.join(inputFolder, file);
+                    const inputFile = path.join(resolvedInputFolder, file);
                     const iv = Buffer.from(filePlan.chunks[index].iv, 'hex');
                     const decipher = crypto.createDecipheriv('aes-256-cbc', aesKey, iv);
                     inputStream = fs.createReadStream(inputFile, { highWaterMark: CHUNK_SIZE });
@@ -91,7 +94,7 @@ export default async function({
             })
         );
 
-        outputStream = fs.createWriteStream(outputFile);
+        outputStream = fs.createWriteStream(resolvedOutputFile);
         const hash = crypto.createHash('sha256');
 
         for (const chunk of decryptedChunks) {
@@ -102,7 +105,7 @@ export default async function({
 
         const decryptedFileHash = hash.digest('hex');
         if (decryptedFileHash !== filePlan.originalFileHash) {
-            await fs.promises.unlink(outputFile).catch(() => {});
+            await fs.promises.unlink(resolvedOutputFile).catch(() => {});
             throw new Error('Erreur : L\'intégrité du fichier est compromise (hash invalide)');
         }
 

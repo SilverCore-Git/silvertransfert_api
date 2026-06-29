@@ -9,27 +9,27 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Simple async mutex for write operations
 class AsyncMutex {
-    private queue: Array<() => void> = [];
     private locked = false;
+    private waiting: Array<{ resolve: (release: () => void) => void }> = [];
 
-    async acquire(): Promise<() => Promise<void>> {
+    async acquire(): Promise<() => void> {
         return new Promise(resolve => {
-            const release = () => {
-                if (this.queue.length > 0) {
-                    this.locked = true;
-                    const next = this.queue.shift()!;
-                    next();
-                } else {
-                    this.locked = false;
-                }
-            };
-            this.queue.push(release);
-            if (!this.locked) {
+            if (this.locked) {
+                this.waiting.push({ resolve });
+            } else {
                 this.locked = true;
-                this.queue.shift()!();
+                resolve(() => this.release());
             }
-            resolve(release);
         });
+    }
+
+    private release(): void {
+        if (this.waiting.length > 0) {
+            const next = this.waiting.shift()!;
+            next.resolve(() => this.release());
+        } else {
+            this.locked = false;
+        }
     }
 }
 

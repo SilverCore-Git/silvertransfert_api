@@ -40,6 +40,10 @@ router.post('/download', async (req: Request, res: Response) => {
     const decryptedFilePath = path.join(config.TEMPdir, transfer.tempFileName);
     const privateKey = await key.read(id, 'private');
 
+    if (!privateKey || typeof privateKey !== 'string') {
+        return res.status(400).json({ error: true, message: 'Private key not found' });
+    }
+
     const verifyPasswd: boolean = await VerifyPasswd(
         encryptedFilePath,
         privateKey,
@@ -89,6 +93,10 @@ router.post('/decrypt', async (req: Request, res: Response) => {
     const encryptedFilePath = path.join(config.DATAdir, transfer.cryptedFileName);
     const decryptedFilePath = path.join(config.TEMPdir, transfer.tempFileName);
     const privateKey = await key.read(id, 'private');
+
+    if (!privateKey || typeof privateKey !== 'string') {
+        return res.status(400).json({ error: true, message: 'Private key not found' });
+    }
 
     const verifyPasswd: boolean = await VerifyPasswd(
         encryptedFilePath,

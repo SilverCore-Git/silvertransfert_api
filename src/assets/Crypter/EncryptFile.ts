@@ -51,7 +51,9 @@ export default async function({
         const fileStats = await fs.promises.stat(inputFile);
         const totalSize = fileStats.size;
 
-        await fs.promises.mkdir(outputFolder, { recursive: true });
+        // Resolve outputFolder to absolute path and ensure it's safe
+        const resolvedOutputFolder = path.resolve(outputFolder);
+        await fs.promises.mkdir(resolvedOutputFolder, { recursive: true });
 
         const aesKey = crypto.randomBytes(32);
         const encryptedAesKey = crypto.publicEncrypt(
@@ -80,9 +82,9 @@ export default async function({
             chunks: totalChunks,
             justadddata: "fds123ERZ!?#{[|`"
         };
-        await fs.promises.writeFile(path.join(outputFolder, 'witness.txt'), JSON.stringify(witnessData, null, 2), 'utf8');
+        await fs.promises.writeFile(path.join(resolvedOutputFolder, 'witness.txt'), JSON.stringify(witnessData, null, 2), 'utf8');
         await fs.promises.writeFile(
-            path.join(outputFolder, 'witness_layout.json'),
+            path.join(resolvedOutputFolder, 'witness_layout.json'),
             JSON.stringify({ fileName: 'witness.txt', aesKey: encryptedAesKey.toString('hex') }, null, 2)
         );
 
@@ -104,7 +106,7 @@ export default async function({
                     await semaphore.acquire();
                     try {
                         const startPosition = chunkIndex * CHUNK_SIZE;
-                        output = fs.createWriteStream(path.join(outputFolder, `part${chunkIndex}.enc`));
+                        output = fs.createWriteStream(path.join(resolvedOutputFolder, `part${chunkIndex}.enc`));
                         const iv = crypto.randomBytes(16);
                         filePlan.chunks[chunkIndex].iv = iv.toString('hex');
                         const cipher = crypto.createCipheriv('aes-256-cbc', aesKey, iv);
@@ -128,7 +130,7 @@ export default async function({
             ))
         );
 
-        await fs.promises.writeFile(path.join(outputFolder, 'layout.json'), JSON.stringify(filePlan, null, 2));
+        await fs.promises.writeFile(path.join(resolvedOutputFolder, 'layout.json'), JSON.stringify(filePlan, null, 2));
         if (!dev_env) await fs.promises.unlink(inputFile);
         console.log('✅ Chiffrement terminé avec succès !');
 

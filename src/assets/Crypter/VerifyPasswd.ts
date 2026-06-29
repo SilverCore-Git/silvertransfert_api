@@ -7,6 +7,12 @@ export default async function (inputFolder: string, privateKey: string, passwd: 
 {  
 
     try {
+        // Validate that privateKey is a non-empty string
+        if (!privateKey || typeof privateKey !== 'string' || privateKey.trim() === '') {
+            console.error('❌ Private key is empty or invalid');
+            return false;
+        }
+
         // Validation du chemin pour prévenir les attaques par injection
         const resolvedPath = path.resolve(inputFolder);
         const layoutPath = path.join(resolvedPath, 'witness_layout.json');
