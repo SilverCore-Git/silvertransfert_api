@@ -14,7 +14,8 @@ import text_crypter from "../../assets/Crypter/Text_crypter";
 
 // Validation des paramètres
 function validateDownloadParams(id: string, passwd: string): { valid: boolean; error?: string } {
-    if (!id || typeof id !== 'string' || id.length < 8 || id.length > 64) {
+    const idRegex = /^[a-zA-Z0-9_-]{8,64}$/;
+    if (!id || typeof id !== 'string' || !idRegex.test(id)) {
         return { valid: false, error: 'ID invalide.' };
     }
     if (!passwd || typeof passwd !== 'string' || passwd.length < 8 || passwd.length > 128) {
@@ -37,7 +38,7 @@ router.post('/download', async (req: Request, res: Response) => {
 
     const encryptedFilePath = path.join(config.DATAdir, transfer.cryptedFileName);
     const decryptedFilePath = path.join(config.TEMPdir, transfer.tempFileName);
-    const privateKey: string = await key.read(id, 'private') as string;
+    const privateKey = await key.read(id, 'private');
 
     const verifyPasswd: boolean = await VerifyPasswd(
         encryptedFilePath,
@@ -87,7 +88,7 @@ router.post('/decrypt', async (req: Request, res: Response) => {
 
     const encryptedFilePath = path.join(config.DATAdir, transfer.cryptedFileName);
     const decryptedFilePath = path.join(config.TEMPdir, transfer.tempFileName);
-    const privateKey: string = await key.read(id, 'private') as string;
+    const privateKey = await key.read(id, 'private');
 
     const verifyPasswd: boolean = await VerifyPasswd(
         encryptedFilePath,
@@ -114,11 +115,13 @@ router.post('/decrypt', async (req: Request, res: Response) => {
 router.get('/status', async (req: Request, res: Response) => {
     const id: string = typeof req.query.id === 'string' ? req.query.id : '';
 
-    if (!id || id.length < 8 || id.length > 64) {
+    // Validation regex stricte
+    const idRegex = /^[a-zA-Z0-9_-]{8,64}$/;
+    if (!id || typeof id !== 'string' || !idRegex.test(id)) {
         return res.status(400).json({ error: true, message: 'ID invalide.' });
     }
 
-    const transfer: Transfert | undefined = await db.get(id);
+    const transfer = await db.get(id);
     if (!transfer) return res.status(404).json({ message: 'Transfer not found', canBeDownload: false });
 
     // Déchiffrer originalFileName pour la vérification ZIP

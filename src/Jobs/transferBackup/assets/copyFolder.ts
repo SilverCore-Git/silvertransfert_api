@@ -1,29 +1,31 @@
 import { promises as fs } from "fs";
 import path from "path";
 
+const MAX_CONCURRENT = 4;
 
-export default async function 
-copyFolder(src: string, dest: string): Promise<void>
-{
+async function processEntry(srcPath: string, destPath: string): Promise<void> {
+    const stats = await fs.stat(srcPath);
+    if (stats.isDirectory()) {
+        await fs.mkdir(destPath, { recursive: true });
+        const entries = await fs.readdir(srcPath, { withFileTypes: true });
+        const tasks = [];
 
-    await fs.mkdir(dest, { recursive: true });
-
-    const entries = await fs.readdir(src, { withFileTypes: true });
-
-    for (const entry of entries) 
-    {
-
-        const srcPath = path.join(src, entry.name);
-        const destPath = path.join(dest, entry.name);
-
-        if (entry.isDirectory()) {
-            // copie récursive
-            await copyFolder(srcPath, destPath);
-        } else {
-            // copie simple
-            await fs.copyFile(srcPath, destPath);
+        for (let i = 0; i < entries.length; i += MAX_CONCURRENT) {
+            const chunk = entries.slice(i, i + MAX_CONCURRENT);
+            const chunkTasks = chunk.map(async (entry) => {
+                const newSrcPath = path.join(srcPath, entry.name);
+                const newDestPath = path.join(destPath, entry.name);
+                await processEntry(newSrcPath, newDestPath);
+            });
+            tasks.push(...chunkTasks);
         }
-    
-    }
 
+        await Promise.all(tasks);
+    } else {
+        await fs.copyFile(srcPath, destPath);
+    }
+}
+
+export default async function copyFolder(src: string, dest: string): Promise<void> {
+    await processEntry(src, dest);
 }

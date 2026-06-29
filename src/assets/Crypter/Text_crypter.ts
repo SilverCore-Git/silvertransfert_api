@@ -10,20 +10,25 @@ class text_crypter
 
     constructor()
     {
-        this.algo = 'aes-256-cbc'; // Mode CBC plus sécurisé que ECB
-        this.ivLength = 16; // IV de 16 octets pour AES
-        
-        // Générer une clé de 32 octets (256 bits) pour AES-256
+        this.algo = 'aes-256-cbc';
+        this.ivLength = 16;
+
         const envKey = process.env.TEXT_SECRET_KEY;
-        if (envKey && envKey.length >= 32) {
-            // Utiliser les 32 premiers octets de la clé environnement
-            this.cryptKey = Buffer.from(envKey.substring(0, 32), 'utf8');
-        } else {
-            // Générer une clé aléatoire si aucune clé valide n'est fournie
-            // NOTE: En production, cela devrait être défini dans .env
-            console.warn('⚠️ TEXT_SECRET_KEY non définie ou trop courte. Génération d\'une clé temporaire.');
-            this.cryptKey = crypto.randomBytes(32);
+        if (!envKey) {
+            throw new Error('CRITICAL: TEXT_SECRET_KEY environment variable is not defined. Never use ephemeral keys for persistent data.');
         }
+
+        if (envKey.length < 32) {
+            throw new Error('CRITICAL: TEXT_SECRET_KEY must be at least 32 bytes long.');
+        }
+
+        const uniqueChars = new Set(envKey).size;
+        if (uniqueChars < 10) {
+            throw new Error('CRITICAL: TEXT_SECRET_KEY has insufficient entropy. Must contain at least 10 unique characters.');
+        }
+
+        const salt = Buffer.from('silvertransfer-key-derivation-salt', 'utf8');
+        this.cryptKey = crypto.scryptSync(envKey, salt, 32) as Buffer;
     }
 
     public encrypt(text: string): string

@@ -70,15 +70,15 @@ const upload = multer({
 });
 
 // Middleware de gestion d'erreur pour multer
-const handleMulterError = (err: any, _req: Request, res: Response, next: () => void) => {
+const handleMulterError = (err: Error | multer.MulterError, _req: Request, res: Response, next: () => void) => {
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
             return res.status(413).json({ error: true, message: 'Fichier trop volumineux. Taille maximale: 16 Go.' });
         }
-        return res.status(400).json({ error: true, message: `Erreur upload: ${err.message}` });
+        return res.status(400).json({ error: true, message: 'File upload failed' });
     }
     if (err) {
-        return res.status(400).json({ error: true, message: err.message });
+        return res.status(400).json({ error: true, message: 'File upload failed' });
     }
     next();
 };
@@ -117,10 +117,10 @@ router.post('/file', upload.array("file", 20), handleMulterError, async (req: Re
         let archive;
         if (typeof archiver === 'function') {
             archive = archiver('zip', { zlib: { level: 9 } });
-        } else if ((archiver as any).create) {
-            archive = (archiver as any).create('zip', { zlib: { level: 9 } });
-        } else if ((archiver as any).default) {
-            archive = (archiver as any).default('zip', { zlib: { level: 9 } });
+        } else if (typeof (archiver as { create?: unknown; default?: unknown }).create === 'function') {
+            archive = (archiver as { create: (type: string, options: unknown) => unknown }).create('zip', { zlib: { level: 9 } });
+        } else if (typeof (archiver as { create?: unknown; default?: unknown }).default === 'function') {
+            archive = (archiver as { default: (type: string, options: unknown) => unknown }).default('zip', { zlib: { level: 9 } });
         } else {
             throw new Error('Archiver module not found or incompatible');
         }
@@ -153,6 +153,18 @@ router.post('/file', upload.array("file", 20), handleMulterError, async (req: Re
     }
 
     await key.generate(id, passwd);
+    
+    // Validation stricte de l'ID et du chemin
+    const idRegex = /^[a-zA-Z0-9_-]{8,64}$/;
+    if (!idRegex.test(id)) {
+        return res.status(400).json({ error: true, message: 'Invalid ID format' });
+    }
+    const normalizedUploadDir = path.normalize(uploadDir);
+    const normalizedFinalPath = path.normalize(finalTempPath);
+    if (!normalizedFinalPath.startsWith(normalizedUploadDir)) {
+        return res.status(400).json({ error: true, message: 'Invalid file path' });
+    }
+    
     const encryptedFileName: string = `${id}.${path.basename(finalTempPath)}.enc`;
     const encryptedFilePath: string = path.join(config.DATAdir, encryptedFileName);
     const downloadPath: string = `https://t.silvertransfert.fr/${id}-${passwd}`;

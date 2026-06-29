@@ -44,12 +44,12 @@ export default async function
 
         stream.pipe(res);
 
-        stream.on('error', (err: any) => {
-            console.error('❌ Error on file stream :', err);
+        stream.on('error', (err: Error) => {
+            console.error('❌ Error on file stream :', err.message);
             if (!res.headersSent) {
                 res.status(500).json({
                     error: true,
-                    message: { silver: 'Error on send a file' }
+                    message: 'Internal server error'
                 });
             }
         });
@@ -73,17 +73,17 @@ export default async function
                         console.log(`🔄 Statut réinitialisé pour ${transferID}`);
                     }
                 }
-            } catch (err: any) {
-                console.warn("❌ Erreur lors de la suppression/réinitialisation :", err.message);
+            } catch (err: unknown) {
+                console.warn("❌ Erreur lors de la suppression/réinitialisation :", (err as Error).message);
             }
         });
 
-    } catch (err: any) {
-        console.error("An error occured : ", err);
+    } catch (err: unknown) {
+        console.error("An error occured :", err);
         if (!res.headersSent) {
             return res.status(500).json({
                 error: true,
-                message: { silver: 'An error occured.', server: err.message }
+                message: 'Internal server error'
             });
         }
     }

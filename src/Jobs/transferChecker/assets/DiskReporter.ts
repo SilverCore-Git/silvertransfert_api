@@ -1,8 +1,18 @@
 import checkDiskSpace from "check-disk-space";
 import fs from "fs";
+const fsp = fs.promises;
 import path from "path";
 import axios from "axios";
 import { dev } from '../../../../package.json';
+import type { Transfert } from '../../../assets/database/dbTypes';
+
+interface DiscordEmbed {
+    title: string;
+    color: number;
+    fields: { name: string; value: string; inline: boolean }[];
+    footer: { text: string };
+    timestamp: string;
+}
 
 export default class DiskReporter {
         
@@ -21,14 +31,15 @@ export default class DiskReporter {
         return (bytes / Math.pow(1024, i)).toFixed(2) + " " + sizes[i];
     }
 
-    private loadDatabase(): any[] {
+    private async loadDatabase(): Promise<Transfert[]> {
         const fullPath = path.resolve(this.dbPath);
-        const raw = fs.readFileSync(fullPath, "utf-8");
-        return Object.values(JSON.parse(raw));
+        const raw = await fsp.readFile(fullPath, "utf-8");
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : Object.values(parsed);
     }
 
-    private async buildReport(): Promise<any> {
-        const entries = this.loadDatabase();
+    private async buildReport(): Promise<{ embeds: DiscordEmbed[] }> {
+        const entries = await this.loadDatabase();
         const totalTransfers = entries.length;
 
         // Total storage used by transfers
@@ -72,7 +83,7 @@ export default class DiskReporter {
         };
     }
 
-    private async sendToDiscord(payload: any) {
+    private async sendToDiscord(payload: { embeds: DiscordEmbed[] }) {
         await axios.post(this.webhookUrl, payload);
     }
 
@@ -82,7 +93,7 @@ export default class DiskReporter {
             const report = await this.buildReport();
             await this.sendToDiscord(report);
             console.log("✅ Rapport envoyé avec succès !");
-        } catch (err) {
+        } catch (err: unknown) {
             throw new Error(`❌ Erreur lors du rapport : ${err}`);
         }
     }

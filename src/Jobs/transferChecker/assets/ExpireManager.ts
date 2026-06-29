@@ -22,8 +22,22 @@ export default class ExpireManager {
         const folder = path.join(config.DATAdir, tr.cryptedFileName);
         const tempFile = path.join(config.TEMPdir, tr.tempFileName);
 
-        await fsp.rm(folder, { recursive: true, force: true });
-        await fsp.rm(tempFile, { recursive: true, force: true });
+        // Vérifier existence avant suppression
+        try {
+            if (await fsp.access(folder).catch(() => false)) {
+                await fsp.rm(folder, { recursive: true, force: true });
+            }
+        } catch (err: unknown) {
+            console.error(`❌ Erreur suppression dossier ${tr.UUID}:`, err);
+        }
+
+        try {
+            if (await fsp.access(tempFile).catch(() => false)) {
+                await fsp.rm(tempFile, { recursive: true, force: true });
+            }
+        } catch (err: unknown) {
+            console.error(`❌ Erreur suppression fichier temp ${tr.UUID}:`, err);
+        }
 
         console.log(`🗑️ Fichiers supprimés pour ${tr.UUID}`);
     }
