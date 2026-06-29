@@ -104,12 +104,12 @@ class Key {
             }
 
             console.log(`✅ Clé ${opt} bien supprimée ! id = ${id}`);
-        } catch (err) {
+        } catch (err: unknown) {
             console.error(`❌ Une erreur est survenue lors de la suppression de la clé ${opt} pour l'id = ${id} :\n${err}`);
         }
     }
 
-    async read(id: string, opt: 'all' | 'public' | 'private' = 'all') {
+    async read(id: string, opt: 'all' | 'public' | 'private' = 'all'): Promise<string | { publicKey: string; privateKey: string } | undefined> {
         validateId(id);
         try {
             if (opt === 'all') {
@@ -123,10 +123,12 @@ class Key {
                 const key = await fs.promises.readFile(path.join('key', 'live', id, 'public_key.pem'), 'utf8');
                 return key;
             } else {
-                console.error('Argument mal défini (key.read => key_manager l74)')
-            }  
+                console.error('Argument mal défini (key.read => key_manager l74)');
+                return undefined;
+            }
         } catch (err: unknown) {
             console.error(`❌ Erreur lors de la lecture de la clé ${opt} pour l'id = ${id} :\n${err}`);
+            return undefined; // ⭐ FIX: Retourne undefined explicitement
         }
     }
 }

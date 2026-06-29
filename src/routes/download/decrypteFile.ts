@@ -18,18 +18,22 @@ export default async function
         encryptedFilePath: string,
         decryptedFilePath: string,
         passwd: string
-    }
-)
+    })
 {
 
     try {
 
-        const privateKey: string = await key.read(transferID, 'private') as string;
+        const privateKey = await key.read(transferID, 'private');
+        
+        // ⭐ FIX: Validate that privateKey exists
+        if (!privateKey) {
+            throw new Error(`Private key not found or could not be read for transfer ${transferID}`);
+        }
 
         await decryptFile({
             inputFolder: encryptedFilePath,
             outputFile: decryptedFilePath,
-            privateKey,
+            privateKey: privateKey as string,
             passwd
         });
 
@@ -41,8 +45,19 @@ export default async function
         }
 
     }
-    catch(err) {
-        console.error('Error on decrypt file for id=', transferID, ' | : ', err);
+    catch(err: unknown) {
+        console.error('❌ Error on decrypt file for id=', transferID, ' | : ', err);
+        
+        // Update transfer status to failed
+        try {
+            const transfer = await db.get(transferID);
+            if (transfer) {
+                transfer.status = 'await_crypting';
+                await db.update(transfer);
+            }
+        } catch (dbErr: unknown) {
+            console.error('❌ Failed to update transfer status after decryption error:', dbErr);
+        }
     }
 
 }
