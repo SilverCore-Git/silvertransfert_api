@@ -92,36 +92,36 @@ console.log("✅ Express chargé");
 
 const uploadDir = config.TEMPdir;
 
-if (!fs.existsSync(uploadDir)) 
-{
-    fs.mkdirSync(uploadDir, { recursive: true });
-    console.log('✅ Répertoire "',config.TEMPdir,'" créé');
-};
-
-if (!fs.existsSync(config.DATAdir))
-{
-    fs.mkdirSync(config.DATAdir, { recursive: true });
-    console.log('✅ Répertoire "',config.DATAdir,'" créé'); 
-};
-
-if (!fs.existsSync(config.LOGDir)) 
-{
-    fs.mkdirSync(config.LOGDir, { recursive: true });
-    console.log('✅ Répertoire "',config.LOGDir,'" créé'); 
-}
-
-if (!fs.existsSync(config.BACKUP_DATA_DIR)) 
-{
-    fs.mkdirSync(config.BACKUP_DATA_DIR, { recursive: true });
-    console.log('✅ Répertoire "',config.BACKUP_DATA_DIR,'" créé'); 
-}
-
-if (!fs.existsSync(config.DBFile)) 
-{
-    fs.mkdirSync(path.dirname(config.DBFile), { recursive: true });
-    fs.writeFileSync(config.DBFile, JSON.stringify([]), 'utf-8');
-    console.log('✅ Fichier "',config.DBFile,'" créé'); 
-}
+(async () => {
+    try {
+        if (!(await fs.promises.access(uploadDir).catch(() => false))) {
+            await fs.promises.mkdir(uploadDir, { recursive: true });
+            console.log('✅ Répertoire "',config.TEMPdir,'" créé');
+        }
+        if (!(await fs.promises.access(config.DATAdir).catch(() => false))) {
+            await fs.promises.mkdir(config.DATAdir, { recursive: true });
+            console.log('✅ Répertoire "',config.DATAdir,'" créé'); 
+        }
+        if (!(await fs.promises.access(config.LOGDir).catch(() => false))) {
+            await fs.promises.mkdir(config.LOGDir, { recursive: true });
+            console.log('✅ Répertoire "',config.LOGDir,'" créé'); 
+        }
+        if (!(await fs.promises.access(config.BACKUP_DATA_DIR).catch(() => false))) {
+            await fs.promises.mkdir(config.BACKUP_DATA_DIR, { recursive: true });
+            console.log('✅ Répertoire "',config.BACKUP_DATA_DIR,'" créé'); 
+        }
+        const dbDir = path.dirname(config.DBFile);
+        if (!(await fs.promises.access(dbDir).catch(() => false))) {
+            await fs.promises.mkdir(dbDir, { recursive: true });
+        }
+        if (!(await fs.promises.access(config.DBFile).catch(() => false))) {
+            await fs.promises.writeFile(config.DBFile, JSON.stringify([]), 'utf-8');
+            console.log('✅ Fichier "',config.DBFile,'" créé'); 
+        }
+    } catch (err) {
+        console.error('❌ Erreur lors de la création des répertoires :', err);
+    }
+})();
 
 
 // root déportés
@@ -142,18 +142,19 @@ app.get('/version', (req, res) => {
 // Générer une clé
 app.get("/key/:bytes", (req, res) => {
     console.log("📥 Réception d'une requête : ", `'/key/${req.params.bytes}'`)
+
+    // Validation AVANT utilisation
+    if (!/^[0-9]+$/.test(req.params.bytes)) {
+        const message = "Erreur lors de la création de la clé : bytes must be a number !";
+        console.log(`Annulation d'une requête : ERROR => ${message}`);
+        return res.json({ "status": "ERROR", "message": message, "key": "none", "bytes": req.params.bytes });
+    }
+
     const bytes = parseInt(req.params.bytes, 10);
 
     let statu;
     let message;
     let key = "none";
-
-    if (isNaN(bytes)) { 
-        statu = "ERROR";
-        message = "Erreur lors de la création de la clé : bytes is not a number !";
-        console.log(`Annulation d'une requête : ${statu} => ${message}`);
-        return res.json({ "status": statu, "message": message, "key": key, "bytes": bytes });
-     }
 
     if (bytes >= config.maxbyteforkey) {
         statu = "ERROR";
@@ -172,6 +173,11 @@ app.get("/key/:bytes", (req, res) => {
 
 
 app.get('/passwd/:nb', async (req, res) => {
+
+    // Validation AVANT utilisation
+    if (!/^[0-9]+$/.test(req.params.nb)) {
+        return res.status(400).json({ error: true, message: 'Invalid length parameter' });
+    }
 
     const nb = Number(req.params.nb);
 

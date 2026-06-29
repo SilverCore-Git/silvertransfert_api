@@ -1,142 +1,142 @@
 import crypto from 'crypto';
 import { Layout } from './CrypterTypes';
 import fs from 'fs';
+import path from 'path';
 
-export default async function
-({
-    inputFile, 
+const CHUNK_SIZE = 16 * 1024 * 1024;
+const CONCURRENCY = 4;
+
+class Semaphore {
+  private count: number;
+  private waiting: Array<() => void> = [];
+
+  constructor(count: number) {
+    this.count = count;
+  }
+
+  async acquire(): Promise<void> {
+    if (this.count > 0) {
+      this.count--;
+      return;
+    }
+    await new Promise<void>((resolve) => this.waiting.push(resolve));
+    this.count--;
+  }
+
+  release(): void {
+    this.count++;
+    if (this.waiting.length > 0) {
+      const resolve = this.waiting.shift()!;
+      resolve();
+    }
+  }
+}
+
+export default async function({
+    inputFile,
     outputFolder = 'data/undefined', 
     publicKey, 
     dev_env = false
-}:{
-    inputFile: any, 
+}: {
+    inputFile: string, 
     outputFolder: string, 
     publicKey: string, 
     dev_env?: boolean
-})
-{
+}) {
+    let hashStream: fs.ReadStream | null = null;
+    let inputStream: fs.ReadStream | null = null;
+    let output: fs.WriteStream | null = null;
 
     try {
-
         const fileStats = await fs.promises.stat(inputFile);
         const totalSize = fileStats.size;
-        const chunkSize = 100 * 1024 * 1024; // 100 mo / chunck
 
-        // Créer un dossier de sortie si nécessaire
         await fs.promises.mkdir(outputFolder, { recursive: true });
 
-        let chunkIndex = 0;
-        let filePlan: Layout = {
-            chunks: [],
-            originalFileHash: '',
-            aesKey: ''
-        };
-
-        // Générer une clé AES pour ce fichier
-        const aesKey = crypto.randomBytes(32); // 32 bytes = AES-256
+        const aesKey = crypto.randomBytes(32);
         const encryptedAesKey = crypto.publicEncrypt(
-            {
-                key: publicKey,
-                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-            },
+            { key: publicKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
             aesKey
         );
 
-        // Calculer le hash sans charger tout le fichier en RAM
         const hash = crypto.createHash('sha256');
-        await new Promise((resolve, reject) => {
-            const hashStream = fs.createReadStream(inputFile);
-            hashStream.on('data', (chunk: any) => {
-                hash.update(chunk);
-            });
-            hashStream.on('end', () => {
-                filePlan.originalFileHash = hash.digest('hex');
-                filePlan.aesKey = encryptedAesKey.toString('hex');
-                resolve(null);
-            });
-            hashStream.on('error', reject);
-        });
+        hashStream = fs.createReadStream(inputFile, { highWaterMark: CHUNK_SIZE });
 
-        // Créer un fichier témoin contenant des informations sur le fichier
+        await new Promise<void>((resolve, reject) => {
+            hashStream!.on('data', (chunk: Buffer) => hash.update(chunk));
+            hashStream!.on('end', resolve);
+            hashStream!.on('error', (err) => { hashStream!.destroy(); reject(err); });
+        });
+        hashStream = null;
+
+        const originalFileHash = hash.digest('hex');
+        const totalChunks = Math.ceil(totalSize / CHUNK_SIZE);
+
         const witnessData = {
             fileName: inputFile,
             fileSize: totalSize,
-            fileHash: filePlan.originalFileHash,
+            fileHash: originalFileHash,
             encryptionKeyLength: aesKey.length,
-            chunks: Math.ceil(totalSize / chunkSize),
+            chunks: totalChunks,
             justadddata: "fds123ERZ!?#{[|`"
         };
+        await fs.promises.writeFile(path.join(outputFolder, 'witness.txt'), JSON.stringify(witnessData, null, 2), 'utf8');
+        await fs.promises.writeFile(
+            path.join(outputFolder, 'witness_layout.json'),
+            JSON.stringify({ fileName: 'witness.txt', aesKey: encryptedAesKey.toString('hex') }, null, 2)
+        );
 
-        const witnessFile = `${outputFolder}/witness.txt`;
-        await fs.promises.writeFile(witnessFile, JSON.stringify(witnessData, null, 2), 'utf8');
-        console.log(`✅ Fichier témoin créé : ${witnessFile}`);
-
-        // Créer le layout.json pour le fichier témoin
-        const witnessLayout = {
-            fileName: 'witness.txt',
+        const filePlan: Layout = {
+            chunks: Array.from({ length: totalChunks }, (_, i) => ({
+                index: i,
+                start: i * CHUNK_SIZE,
+                iv: ''
+            })),
+            originalFileHash,
             aesKey: encryptedAesKey.toString('hex')
         };
-        await fs.promises.writeFile(`${outputFolder}/witness_layout.json`, JSON.stringify(witnessLayout, null, 2));
-        console.log(`✅ Layout du fichier témoin écrit dans witness_layout.json`);
 
-        // Fonction pour traiter un morceau du fichier principal
-        async function processChunk(startPosition: number)
-        {
-            const outputFile = `${outputFolder}/part${chunkIndex}.enc`;
-            const output = fs.createWriteStream(outputFile);
+        const semaphore = new Semaphore(CONCURRENCY);
 
-            // Générer un IV unique pour ce morceau
-            const iv = crypto.randomBytes(16);
-            const cipher = crypto.createCipheriv('aes-256-cbc', aesKey, iv);
+        await Promise.all(
+            Array.from({ length: totalChunks }, (_, chunkIndex) => (
+                (async () => {
+                    await semaphore.acquire();
+                    try {
+                        const startPosition = chunkIndex * CHUNK_SIZE;
+                        output = fs.createWriteStream(path.join(outputFolder, `part${chunkIndex}.enc`));
+                        const iv = crypto.randomBytes(16);
+                        filePlan.chunks[chunkIndex].iv = iv.toString('hex');
+                        const cipher = crypto.createCipheriv('aes-256-cbc', aesKey, iv);
+                        const endPosition = Math.min(startPosition + CHUNK_SIZE - 1, totalSize - 1);
+                        inputStream = fs.createReadStream(inputFile, { start: startPosition, end: endPosition, highWaterMark: CHUNK_SIZE });
 
-            // Ajouter les informations au plan
-            filePlan.chunks.push({
-                index: chunkIndex,
-                start: startPosition,
-                iv: iv.toString('hex') // IV en hex
-            });
+                        await new Promise<void>((resolve, reject) => {
+                            inputStream!.on('data', (chunk: Buffer) => output!.write(cipher.update(chunk)));
+                            inputStream!.on('end', () => { output!.write(cipher.final()); output!.end(); resolve(); });
+                            inputStream!.on('error', reject);
+                            output!.on('error', reject);
+                        });
+                    } finally {
+                        inputStream?.destroy();
+                        output?.destroy();
+                        inputStream = null;
+                        output = null;
+                        semaphore.release();
+                    }
+                })()
+            ))
+        );
 
-            // Lire le bon morceau du fichier
-            const inputStream = fs.createReadStream(inputFile, { start: startPosition, end: Math.min(startPosition + chunkSize - 1, totalSize - 1) });
-
-            return new Promise((resolve, reject) => {
-                inputStream.on('data', (chunk: any) => {
-                    const encryptedChunk = cipher.update(chunk);
-                    output.write(encryptedChunk);
-                });
-
-                inputStream.once('end', () => {
-                    const finalEncrypted = cipher.final();
-                    output.write(finalEncrypted);
-                    output.end();
-                    console.log(`✅ Partie ${chunkIndex} chiffrée avec succès : ${outputFile}`);
-                    chunkIndex++;
-                    resolve(null);
-                });
-
-                inputStream.once('error', reject);
-                output.once('error', reject);
-            });
-        }
-
-        // Boucle de découpage
-        while ((chunkIndex * chunkSize) < totalSize) {
-            await processChunk(chunkIndex * chunkSize);
-        }
-
-        // Écrire le fichier de plan pour le fichier principal
-        await fs.promises.writeFile(`${outputFolder}/layout.json`, JSON.stringify(filePlan, null, 2));
-
-        if (!dev_env) {
-            // Supprimer l'original
-            await fs.promises.unlink(inputFile);
-            console.log(`✅ Fichier source "${inputFile}" supprimé après chiffrement.`);
-        }
-
+        await fs.promises.writeFile(path.join(outputFolder, 'layout.json'), JSON.stringify(filePlan, null, 2));
+        if (!dev_env) await fs.promises.unlink(inputFile);
         console.log('✅ Chiffrement terminé avec succès !');
 
-    } catch (error) {
+    } catch (error: unknown) {
+        hashStream?.destroy();
+        inputStream?.destroy();
+        output?.destroy();
         console.error('❌ Erreur lors du chiffrement :', error);
+        throw error;
     }
-
 }
