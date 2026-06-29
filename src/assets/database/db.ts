@@ -12,22 +12,24 @@ class AsyncMutex {
     private queue: Array<() => void> = [];
     private locked = false;
 
-    async acquire(): Promise<() => void> {
+    async acquire(): Promise<() => Promise<void>> {
         return new Promise(resolve => {
-            this.queue.push(resolve);
+            const release = () => {
+                if (this.queue.length > 0) {
+                    this.locked = true;
+                    const next = this.queue.shift()!;
+                    next();
+                } else {
+                    this.locked = false;
+                }
+            };
+            this.queue.push(release);
             if (!this.locked) {
                 this.locked = true;
                 this.queue.shift()!();
             }
+            resolve(release);
         });
-    }
-
-    release() {
-        if (this.queue.length > 0) {
-            this.queue.shift()!();
-        } else {
-            this.locked = false;
-        }
     }
 }
 
@@ -54,8 +56,7 @@ class db
             this.rebuildIndex();
             this.initialized = true;
         } finally {
-            unlock();
-            this.writeMutex.release();
+            await unlock();
         }
     }
 
@@ -99,8 +100,7 @@ class db
             this.invalidateCache();
             await this.persist();
         } finally {
-            unlock();
-            this.writeMutex.release();
+            await unlock();
         }
     }
 
@@ -122,8 +122,7 @@ class db
                 await this.persist();
             }
         } finally {
-            unlock();
-            this.writeMutex.release();
+            await unlock();
         }
     }
 
@@ -140,8 +139,7 @@ class db
                 await this.persist();
             }
         } finally {
-            unlock();
-            this.writeMutex.release();
+            await unlock();
         }
     }
 
@@ -153,8 +151,7 @@ class db
             this.invalidateCache();
             await this.persist();
         } finally {
-            unlock();
-            this.writeMutex.release();
+            await unlock();
         }
     }
 }
