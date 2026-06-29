@@ -43,6 +43,7 @@ export default async function (inputFolder: string, privateKey: string, passwd: 
             {
                 key: privateKey,
                 passphrase: passwd,
+                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING
             },
             encryptedAesKey
         );

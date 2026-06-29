@@ -63,7 +63,10 @@ export default async function({
         }
 
         const encryptedAesKey = Buffer.from(filePlan.aesKey, 'hex');
-        const aesKey = crypto.privateDecrypt({ key: privateKey, passphrase: passwd }, encryptedAesKey);
+        const aesKey = crypto.privateDecrypt(
+            { key: privateKey, passphrase: passwd, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
+            encryptedAesKey
+        );
 
         const semaphore = new Semaphore(CONCURRENCY);
         const decryptedChunks: Buffer[] = Array(sortedFiles.length);
