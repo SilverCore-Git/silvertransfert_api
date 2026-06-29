@@ -164,7 +164,7 @@ router.post('/file', upload.array("file", 20), handleMulterError, async (req: Re
         UUID: id,
         cryptedFileName: encryptedFileName,
         tempFileName: path.basename(finalTempPath),
-        originalFileName: originalName,
+        originalFileName: text_crypter.encrypt(originalName),
         size: totalSize,
         senderIp: ip,
         date: `${getCurrentDate()} - ${getCurrentTime()}`,

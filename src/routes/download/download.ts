@@ -10,6 +10,7 @@ import VerifyPasswd from "../../assets/Crypter/VerifyPasswd";
 import key from "../../assets/Crypter/key_manager";
 import downloadFile from "./downloadFile";
 import config from "../../config/config";
+import text_crypter from "../../assets/Crypter/Text_crypter";
 
 // Validation des paramètres
 function validateDownloadParams(id: string, passwd: string): { valid: boolean; error?: string } {
@@ -54,11 +55,17 @@ router.post('/download', async (req: Request, res: Response) => {
         console.error('File not found : ', decryptedFilePath);
         return res.status(404).json({ error: true, message: 'File not found' });
     }
+
+    // Déchiffrer originalFileName avant utilisation
+    const decryptedOriginalName = transfer.originalFileName
+        ? text_crypter.decrypt(transfer.originalFileName)
+        : undefined;
     
     return await downloadFile({
         decryptedFilePath,
-        originalFileName: transfer.originalFileName,
-        res
+        originalFileName: decryptedOriginalName,
+        res,
+        transferID: id
     });
 });
 
@@ -113,12 +120,17 @@ router.get('/status', async (req: Request, res: Response) => {
 
     const transfer: Transfert | undefined = await db.get(id);
     if (!transfer) return res.status(404).json({ message: 'Transfer not found', canBeDownload: false });
+
+    // Déchiffrer originalFileName pour la vérification ZIP
+    const decryptedOriginalName = transfer.originalFileName
+        ? text_crypter.decrypt(transfer.originalFileName)
+        : undefined;
     
     res.json({
         id: transfer.UUID,
         canBeDownload: transfer.status === 'ready_to_download',
         canBeEncrypt: transfer.status === 'ready_to_decrypt',
-        isZip: transfer.originalFileName?.endsWith('.zip') && transfer.originalFileName?.startsWith('SilverTransfer_')
+        isZip: decryptedOriginalName?.endsWith('.zip') && decryptedOriginalName?.startsWith('SilverTransfer_')
     });
 });
 

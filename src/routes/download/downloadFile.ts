@@ -2,18 +2,21 @@ import type { Response } from "express";
 import mime from "mime-types";
 import fs from 'fs';
 import path from 'path';
+import db from "../../assets/database/db";
 
 export default async function
 (
     {
         res,
         decryptedFilePath,
-        originalFileName
+        originalFileName,
+        transferID
     }:
     {
         res: Response,
         decryptedFilePath: string,
-        originalFileName?: string
+        originalFileName?: string,
+        transferID?: string
     }
 )
 {
@@ -60,8 +63,18 @@ export default async function
             try {
                 await fs.promises.unlink(decryptedFilePath);
                 console.log("🗑️ Temp file deleted !");
+
+                // ✅ Réinitialise le statut après téléchargement
+                if (transferID) {
+                    const transfer = await db.get(transferID);
+                    if (transfer) {
+                        transfer.status = 'await_crypting';
+                        await db.update(transfer);
+                        console.log(`🔄 Statut réinitialisé pour ${transferID}`);
+                    }
+                }
             } catch (err: any) {
-                console.warn("❌ Cannot delete temp file :", err.message);
+                console.warn("❌ Erreur lors de la suppression/réinitialisation :", err.message);
             }
         });
 
