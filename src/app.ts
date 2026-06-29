@@ -114,10 +114,6 @@ const uploadDir = config.TEMPdir;
         if (!(await fs.promises.access(dbDir).catch(() => false))) {
             await fs.promises.mkdir(dbDir, { recursive: true });
         }
-        if (!(await fs.promises.access(config.DBFile).catch(() => false))) {
-            await fs.promises.writeFile(config.DBFile, JSON.stringify([]), 'utf-8');
-            console.log('✅ Fichier "',config.DBFile,'" créé'); 
-        }
     } catch (err) {
         console.error('❌ Erreur lors de la création des répertoires :', err);
     }
