@@ -39,10 +39,17 @@ export default async function (inputFolder: string, privateKey: string, passwd: 
         const encryptedAesKey = Buffer.from(layout.aesKey, 'hex');
 
         // 🔥 Essayer de décrypter la clé AES avec la clé privée et le mot de passe
+        // Il faut d'abord déchiffrer la clé privée PKCS#8 chiffrée avec la passphrase
+        const decryptedPrivateKey = crypto.createPrivateKey({
+            key: privateKey,
+            passphrase: passwd,
+            format: 'pem',
+            type: 'pkcs8'
+        });
+
         crypto.privateDecrypt(
             {
-                key: privateKey,
-                passphrase: passwd,
+                key: decryptedPrivateKey,
                 padding: crypto.constants.RSA_PKCS1_OAEP_PADDING
             },
             encryptedAesKey

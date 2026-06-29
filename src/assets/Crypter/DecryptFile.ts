@@ -63,8 +63,17 @@ export default async function({
         }
 
         const encryptedAesKey = Buffer.from(filePlan.aesKey, 'hex');
+        
+        // Il faut d'abord déchiffrer la clé privée PKCS#8 chiffrée avec la passphrase
+        const decryptedPrivateKey = crypto.createPrivateKey({
+            key: privateKey,
+            passphrase: passwd,
+            format: 'pem',
+            type: 'pkcs8'
+        });
+        
         const aesKey = crypto.privateDecrypt(
-            { key: privateKey, passphrase: passwd, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
+            { key: decryptedPrivateKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
             encryptedAesKey
         );
 
