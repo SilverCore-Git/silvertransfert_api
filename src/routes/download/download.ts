@@ -51,6 +51,7 @@ router.post('/download', async (req: Request, res: Response) => {
     try {
         await fs.promises.access(decryptedFilePath);   // verify exist file
     } catch (e) {
+        console.error('File not found : ', decryptedFilePath);
         return res.status(404).json({ error: true, message: 'File not found' });
     }
     
