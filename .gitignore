@@ -6,3 +6,7 @@ src/data/
 src/temp/
 src/db/
 src/log/
+temp/
+data/
+log/
+db/
