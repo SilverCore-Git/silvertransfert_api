@@ -17,7 +17,7 @@ import config from './config/config';
 import { dev, version } from '../package.json';
 
 import './assets/Logger';
-import './Jobs';
+import './Jobs/index';
 
 
 const corsOptions = {
