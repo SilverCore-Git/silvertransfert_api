@@ -1,7 +1,9 @@
 import cron from "node-cron";
-import run from "./run";
+import run from "./run.js";
 
-// all days to 1our
+run();
 cron.schedule("0 1 * * *", () => {
     run();
+}, {
+    timezone: "Europe/Paris"
 });
