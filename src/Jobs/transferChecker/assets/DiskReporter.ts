@@ -79,7 +79,6 @@ export default class DiskReporter {
 
     private async sendToDiscord(payload: any) {
         const res = await axios.post(this.webhookUrl, payload);
-        console.log(res.data);
     }
 
     public async run() {
