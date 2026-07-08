@@ -38,15 +38,17 @@ export default class DiskReporter {
         }
 
         // Disk info
-        const disk = await checkDiskSpace(dev ? "C:\\Users\\felix\\OneDrive\\Documents\\SilverCore\\app\\SilverTransfert\\app\\dist\\data" : "/mnt/data");
+        const diskPath = dev ? "C:\\Users\\felix\\OneDrive\\Documents\\SilverCore\\app\\SilverTransfert\\app\\dist\\data" : "/mnt/data";
+        const disk = await checkDiskSpace(diskPath);
 
         // Formatting
         const totalSizeFormatted = this.formatBytes(totalSize);
         const diskSizeFormatted = this.formatBytes(disk.size);
         const freeSizeFormatted = this.formatBytes(disk.free);
-        const percentUsed = ((totalSize / disk.size) * 100).toFixed(2) + "%";
-
-        const timestamp = Math.floor(Date.now() / 1000);
+        
+        // Calcul du vrai pourcentage d'utilisation du disque (plutôt que par rapport à la taille totale des transferts)
+        const diskUsedBytes = disk.size - disk.free;
+        const percentUsed = ((diskUsedBytes / disk.size) * 100).toFixed(2) + "%";
 
         // Embed Discord
         return {
@@ -57,14 +59,17 @@ export default class DiskReporter {
                     fields: [
                         { name: "🗂️ Nombre de transferts", value: `${totalTransfers}`, inline: true },
                         { name: "💾 Taille totale utilisée", value: `${totalSizeFormatted}`, inline: true },
-                        { name: "\u200B", value: "\u200B", inline: false }, // ligne vide
-                        { name: "🖥️ Disque", value: '', inline: false },
+                        { name: "\u200B", value: "\u200B", inline: false }, // Ligne vide valide
+                        
+                        // FIX ICI : Discord refuse la value vide. On met un point de repère ou une icône
+                        { name: "🖥️ État du Disque Système", value: `Logs pour \`${diskPath}\``, inline: false },
+                        
                         { name: "Taille totale", value: `${diskSizeFormatted}`, inline: true },
                         { name: "Libre", value: `${freeSizeFormatted}`, inline: true },
-                        { name: "Utilisation estimée", value: `${percentUsed}`, inline: true },
+                        { name: "Utilisation du disque", value: `${percentUsed}`, inline: true },
                     ],
                     footer: {
-                        text: `Rapport généré`,
+                        text: `Rapport généré automatiquement`,
                     },
                     timestamp: new Date().toISOString()
                 }
@@ -82,9 +87,10 @@ export default class DiskReporter {
             const report = await this.buildReport();
             await this.sendToDiscord(report);
             console.log("✅ Rapport envoyé avec succès !");
-        } catch (err) {
-            throw new Error(`❌ Erreur lors du rapport : ${err}`);
+        } catch (err: any) {
+            // Permet d'avoir le vrai message d'erreur d'Axios si Discord refuse le payload
+            const errorMsg = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+            console.error(`❌ Erreur lors du rapport : ${errorMsg}`);
         }
     }
-
 }
